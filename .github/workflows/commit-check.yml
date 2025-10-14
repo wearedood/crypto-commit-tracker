@@ -1,0 +1,29 @@
+name: Weekly Crypto Commit Check
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"  # every Monday 09:00 UTC
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v4
+
+      - name: Install git
+        run: sudo apt-get update && sudo apt-get install -y git
+
+      - name: Run crypto commit check script
+        run: |
+          chmod +x crypto_commit_check.sh
+          ./crypto_commit_check.sh > results.txt
+
+      - name: Commit and push results
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add results.txt
+          git commit -m "Update crypto commit counts - $(date)" || exit 0
+          git push
