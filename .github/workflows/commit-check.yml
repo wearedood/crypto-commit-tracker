@@ -2,26 +2,61 @@ name: Daily Crypto & Celo Commit Tracker
 
 on:
   schedule:
-    - cron: "0 9 * * *"   # every day at 09:00 UTC
+    - cron: "0 11 * * *"  # Runs daily at 11:00 UTC
   workflow_dispatch:
 
 jobs:
-  check:
+  commit-check:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout the repo
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install git
-        run: sudo apt-get update && sudo apt-get install -y git
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y git jq
 
-      - name: Run commit check script
+      - name: Run Crypto Commit & Celo Tracker
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          bash ./crypto_commit_check.sh
-          cat commit_results.md
+          mkdir -p ~/crypto_repos
+          cd ~/crypto_repos
+
+          repos=(
+            "bitcoin/bitcoin"
+            "ethereum/go-ethereum"
+            "ethereum/solidity"
+            "monero-project/monero"
+            "litecoin-project/litecoin"
+            "smartcontractkit/chainlink"
+            "input-output-hk/cardano-node"
+            "paritytech/polkadot"
+            "xmrig/xmrig"
+            "celo-org/celo-monorepo"
+          )
+
+          echo "| Repository | Commits | Last Updated |" > summary.md
+          echo "|------------|---------|--------------|" >> summary.md
+
+          for repo in "${repos[@]}"; do
+            echo "Fetching $repo..."
+            if [ -d "$(basename $repo)" ]; then
+              cd "$(basename $repo)"
+              git fetch --all > /dev/null 2>&1 || echo "Fetch failed"
+            else
+              git clone https://github.com/$repo.git || continue
+              cd "$(basename $repo)"
+            fi
+
+            commits=$(git rev-list --all --count || echo "0")
+            last_date=$(git log -1 --format=%cs || echo "N/A")
+
+            echo "| **$repo** | $commits | $last_date |" >> ../summary.md
+            cd ..
+          done
+
+          cat summary.md
 
       - name: Update README with latest results
         run: |
@@ -33,12 +68,16 @@ jobs:
           # Remove old section if exists
           sed -i '/## 🪙 Crypto & Celo Commit Summary/,$d' README.md
           echo "" >> README.md
-          cat commit_results.md >> README.md
+          echo "## 🪙 Crypto & Celo Commit Summary (auto-updated)" >> README.md
+          echo "" >> README.md
+          cat ~/crypto_repos/summary.md >> README.md
+          echo "" >> README.md
+          echo "_Updated automatically by GitHub Actions on $(date -u '+%Y-%m-%d %H:%M UTC')_" >> README.md
 
       - name: Commit & push results
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md commit_results.md
+          git add README.md
           git commit -m "chore: update commit stats $(date -u '+%Y-%m-%d')" || echo "No changes to commit"
           git push
