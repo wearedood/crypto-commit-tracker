@@ -1,39 +1,33 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------
 # crypto_commit_check.sh
-# Verifies the number of GitHub commits made to key crypto repos.
+# Verifies commit counts for major crypto & Celo repositories.
 # ---------------------------------------------------------------
 
-# Directory to clone repositories into
-WORKDIR="${HOME}/crypto_repos"
+WORKDIR="$(pwd)/repos"
 mkdir -p "$WORKDIR"
 cd "$WORKDIR" || exit 1
 
-# List of repositories to track
 REPOS=(
   "bitcoin/bitcoin"
   "ethereum/go-ethereum"
   "ethereum/solidity"
   "monero-project/monero"
-  "litecoin-project/litecoin"
   "smartcontractkit/chainlink"
   "input-output-hk/cardano-node"
   "paritytech/polkadot"
-  "xmrig/xmrig"
+  "celo-org/celo-monorepo"
+  "celo-org/celo-blockchain"
 )
 
-echo "---------------------------------------------------------------"
-echo " Verifying commit counts for curated crypto repositories"
-echo " Location: $WORKDIR"
-echo "---------------------------------------------------------------"
-
-printf "%%-35s | %%10s | %%10s\n" "Repository" "Commits" "Updated"
-echo "---------------------------------------------------------------"
+RESULTS_FILE="../commit_results.md"
+echo "## 🪙 Crypto & Celo Commit Summary (auto-updated)" > "$RESULTS_FILE"
+echo "" >> "$RESULTS_FILE"
+echo "| Repository | Commits | Last Updated |" >> "$RESULTS_FILE"
+echo "|------------|---------|--------------|" >> "$RESULTS_FILE"
 
 for REPO in "${REPOS[@]}"; do
   NAME=$(basename "$REPO")
-
-  # Clone or update the repo (shallow fetch if already exists)
   if [ -d "$NAME/.git" ]; then
     cd "$NAME" || continue
     git fetch --all --quiet
@@ -42,15 +36,12 @@ for REPO in "${REPOS[@]}"; do
     cd "$NAME" || continue
   fi
 
-  # Count commits (all branches)
   COUNT=$(git rev-list --all --count 2>/dev/null || echo "N/A")
   UPDATED=$(git log -1 --format="%cs" 2>/dev/null || echo "N/A")
-
-  printf "%%-35s | %%10s | %%10s\n" "$REPO" "$COUNT" "$UPDATED"
+  echo "| **${REPO}** | ${COUNT} | ${UPDATED} |" >> "$RESULTS_FILE"
 
   cd "$WORKDIR" || exit 1
 done
 
-echo "---------------------------------------------------------------"
-echo " Done! All counts reflect the total commits across all branches."
-echo "---------------------------------------------------------------"      
+echo "" >> "$RESULTS_FILE"
+echo "_Updated automatically by GitHub Actions on $(date -u '+%Y-%m-%d %H:%M UTC')_" >> "$RESULTS_FILE"
