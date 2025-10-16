@@ -1,29 +1,42 @@
-name: Weekly Crypto Commit Check
+name: Daily Crypto & Celo Commit Tracker
 
 on:
   schedule:
-    - cron: "0 9 * * 1"  # every Monday 09:00 UTC
+    - cron: "0 9 * * *"   # every day at 09:00 UTC
   workflow_dispatch:
 
 jobs:
   check:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout this repo
+      - name: Checkout repo
         uses: actions/checkout@v4
 
       - name: Install git
         run: sudo apt-get update && sudo apt-get install -y git
 
-      - name: Run crypto commit check script
+      - name: Run commit check script
         run: |
-          chmod +x crypto_commit_check.sh
-          ./crypto_commit_check.sh > results.txt
+          bash ./crypto_commit_check.sh
+          cat commit_results.md
 
-      - name: Commit and push results
+      - name: Update README with latest results
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add results.txt
-          git commit -m "Update crypto commit counts - $(date)" || exit 0
+          # Replace content between markers in README.md
+          if [ ! -f README.md ]; then
+            echo "# 🧭 Crypto & Celo Commit Tracker" > README.md
+          fi
+
+          # Remove old section if exists
+          sed -i '/## 🪙 Crypto & Celo Commit Summary/,$d' README.md
+          echo "" >> README.md
+          cat commit_results.md >> README.md
+
+      - name: Commit & push results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md commit_results.md
+          git commit -m "chore: update commit stats $(date -u '+%Y-%m-%d')" || echo "No changes to commit"
           git push
