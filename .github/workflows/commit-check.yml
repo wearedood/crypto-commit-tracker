@@ -77,7 +77,8 @@ jobs:
       - name: Commit & push results
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "github-actions[bot
+                      git remote set-url origin https://x-access-token:${{ secrets.CRYPTO_COMMIT_TRACKER_PAT }}@github.com/wearedood/crypto-commit-tracker.git]@users.noreply.github.com"
           git add README.md
           git commit -m "chore: update commit stats $(date -u '+%Y-%m-%d')" || echo "No changes to commit"
           git push
